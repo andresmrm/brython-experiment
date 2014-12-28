@@ -7,6 +7,9 @@ app = Flask(__name__)
 ws = WebSocket(app)
 
 
+map = []
+
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -23,6 +26,9 @@ def echo(ws):
         msg = ws.receive()
         print(msg)
         if msg is not None:
+            x, y = msg.decode("utf8").split(',')
+            map.append((x, y))
+            print(map)
             ws.send(msg.upper())
         else:
             return
