@@ -35,12 +35,13 @@ class WebSocket(object):
         # print(self, evt)
         pass
 
-    def on_message(self, evt):
+    def on_message(self, evt, a):
         # message reeived from server
         # alert("Message received : %s" % evt.data)
-        x, y = [int(i) for i in evt.data.split(',')]
-        bunny = DRAWER.add_element("/static/img/bunny.png", x, y)
-        bunnies.append(bunny)
+        id, x, y = [int(i) for i in evt.data.split(',')]
+        if id not in bunnies:
+            bunny = DRAWER.add_element("/static/img/bunny.png", x, y)
+            bunnies[id] = bunny
 
     def on_close(evt):
         # websocket is closed
@@ -49,7 +50,7 @@ class WebSocket(object):
 
 WS = WebSocket("ws://127.0.0.1:8080/websocket")
 
-bunnies = []
+bunnies = {}
 
 
 class Drawer(object):
@@ -82,7 +83,7 @@ class Drawer(object):
         def animate():
             window.requestAnimFrame(animate)
             # just for fun, lets rotate mr rabbit a little
-            for bunny in bunnies:
+            for bunny in bunnies.values():
                 bunny.rotation += 0.1
             # render the stage
             self.renderer.render(self.stage)

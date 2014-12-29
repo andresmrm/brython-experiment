@@ -16,6 +16,7 @@ sockets = Sockets(app)
 
 
 map = []
+users = []
 
 
 @app.route('/')
@@ -28,19 +29,28 @@ def serve_static(filename):
     return send_from_directory('static', filename)
 
 
+def send_data():
+    for user in users:
+        for i in map:
+            user.send("%s,%s,%s" % i)
+
+
 # @ws.route('/websocket')
 @sockets.route('/websocket')
 def communicator(ws):
+    users.append(ws)
+    send_data()
     while True:
         msg = ws.receive()
         print(msg)
         if msg is not None:
             x, y = msg.decode("utf8").split(',')
-            map.append((x, y))
-            print(map)
-            ws.send(msg)
+            id = len(map)
+            map.append((id, x, y))
+            send_data()
         else:
             return
+    del users[ws]
 
 # if __name__ == '__main__':
 #     if GEVENT:
