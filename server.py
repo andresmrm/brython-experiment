@@ -1,10 +1,15 @@
 #!/usr/bin/env python
 from flask import Flask, render_template, send_from_directory
-from flask.ext.uwsgi_websocket import WebSocket
-
 
 app = Flask(__name__)
-ws = WebSocket(app)
+try:
+    from flask.ext.uwsgi_websocket import GeventWebSocket
+    ws = GeventWebSocket(app)
+    GEVENT = True
+except:
+    from flask.ext.uwsgi_websocket import WebSocket
+    ws = WebSocket(app)
+    GEVENT = False
 
 
 map = []
@@ -34,4 +39,7 @@ def echo(ws):
             return
 
 if __name__ == '__main__':
-    app.run(debug=True, threads=16)
+    if GEVENT:
+        app.run(debug=True, gevent=100)
+    else:
+        app.run(debug=True, threads=16)
