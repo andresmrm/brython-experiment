@@ -31,16 +31,22 @@ def serve_static(filename):
 
 def send_data():
     for user in users:
+        print("================", users)
         for i in map:
+            print("~~~~~~~~~~~~~~~~~~~~", user)
             user.send("%s,%s,%s" % i)
 
 
 # @ws.route('/websocket')
 @sockets.route('/websocket')
 def communicator(ws):
+    print("=-----------------------", ws)
     users.append(ws)
+    print("AAAAAAAAAAAAAAAAAAAAA")
     send_data()
+    print("BBBBBBBBBBB")
     while True:
+        print("oAAAAAAAAAAAAAAAAAAAA")
         msg = ws.receive()
         print(msg)
         if msg is not None:
@@ -49,8 +55,9 @@ def communicator(ws):
             map.append((id, x, y))
             send_data()
         else:
-            return
-    del users[ws]
+            break
+    users.remove(ws)
+    del ws
 
 # if __name__ == '__main__':
 #     if GEVENT:
