@@ -77,7 +77,7 @@ class Drawer(object):
             WS.send((x, y))
 
         grass.mousedown = g
-        texture = window.PIXI.Texture.fromImage("/static/img/bunny.png")
+        # window.PIXI.Texture.fromImage("/static/img/bunny.png")
 
         def animate():
             window.requestAnimFrame(animate)
