@@ -8,10 +8,12 @@ if False:
 
 class WebSocket(object):
 
-    def __init__(self, host, on_message):
+    def __init__(self, host, on_open, on_message, on_close):
         self.host = host
         self.ws = None
         self.on_message = on_message
+        self.on_open = on_open
+        self.on_close = on_close
         self.open_websocket()
 
     def open_websocket(self):
@@ -30,16 +32,16 @@ class WebSocket(object):
     def send(self, data):
         self.ws.send(data)
 
-    def on_open(self, evt):
-        # print(self, evt)
-        alert("Connection is OPEN!")
-        pass
+    # def on_open(self, evt):
+        # # print(self, evt)
+        # alert("Connection is OPEN!")
+        # pass
 
     # def on_message(self, evt):
         # # message reeived from server
         # # alert("Message received : %s" % evt.data)
         # alert(evt.data)
 
-    def on_close(self, evt):
-        # websocket is closed
-        alert("Connection is closed")
+    # def on_close(self, evt):
+        # # websocket is closed
+        # alert("Connection is closed")

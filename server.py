@@ -52,14 +52,15 @@ class Map(object):
         )
         self.add(me)
         me = MapElement(
-            x=600,
-            y=300,
-            img="waterfall.png",
-            animation="fall",
-            animation_speed=12,
-            sound=["waterfall.ogg"],
+            sound=["forest.ogg"],
             sound_autoplay=True,
             sound_loop=True,
+        )
+        self.add(me)
+        me = MapElement(
+            x=400,
+            y=200,
+            img="tree.png",
         )
         self.add(me)
 
@@ -78,48 +79,75 @@ class MapElement(object):
     def __init__(self, **args):
         # Everything that is passed in args will be dumped for network
         self.dumpable = args
+        if 'id' not in args:
+            # TODO no random...
+            import random
+            id = random.randint(0, 30000)
+            args['id'] = id
         for k, v in args.items():
             setattr(self, k, v)
+
         self.changed = True
 
     def __dump__(self):
         return self.dumpable
 
 
-class Users(object):
+class Players(object):
 
     def __init__(self):
-        self.users = {}
+        self.players = {}
 
-    def create(self, id, ws):
-        user = User(ws)
-        self.users[id] = user
-        return user
+    # def create(self, id, ws):
+    #     self.players[id] = player
+    #     return player
 
     # def send_all(self, id):
-    #     self.users[id].send_map(MAP)
+    #     self.players[id].send_map(MAP)
 
-    def connect(self, id, ws):
-        user = self.create(id, ws)
-        user.send_map(MAP)
-        MAP.add(user)
-        return user
+    def connect(self, ws):
+        player = Player(ws)
+        name = player.wait_login()
+        self.players[name] = player
+        player.create_avatar(MAP)
+        player.send_map(MAP)
+        return player
 
-    def disconnect(self, id):
-        user = self.users[id]
-        self.users[id] = None
-        MAP.remove(user)
-        del user.ws
+    def disconnect(self, name):
+        player = self.players[name]
+        self.players[name] = None
+        player.remove_avatar(MAP)
+        del player.ws
 
 
-class User(MapElement):
+class Player(MapElement):
 
     def __init__(self, ws):
-        super(User, self).__init__(x=10, y=10, img="bunny.png")
         self.ws = ws
 
     def receive(self):
         return self.ws.receive()
+
+    def wait_login(self):
+        data = self.receive()
+        msg = json.loads(data)
+        if msg[0] == 'login':
+            self.name = str(msg[1])
+            return self.name
+        else:
+            raise 'Waiting "login", but got: ' + msg
+
+    def create_avatar(self, map):
+        self.avatar = MapElement(
+            id="avatar_" + self.name,
+            x=10,
+            y=10,
+            img="bunny.png")
+        map.add(self.avatar)
+        return self.avatar
+
+    def remove_avatar(self, map):
+        map.remove(self.avatar)
 
     def send_map(self, map):
         self.send_data('add_element', map)
@@ -142,18 +170,18 @@ class User(MapElement):
 
 
 MAP = Map()
-USERS = Users()
+PLAYERS = Players()
 
 
 # @ws.route('/websocket')
 @sockets.route('/websocket')
 def communicator(ws):
-    print("CONECTANDO", ws)
-    id = len(USERS.users)
-    user = USERS.connect(id, ws)
-    print("CONECTADO", ws)
-    user.listen()
-    USERS.disconnect(id)
+    print("New player connecting!", ws)
+    player = PLAYERS.connect(ws)
+    print("Loged in: ", player.name)
+    player.listen()
+    PLAYERS.disconnect(player.name)
+    print("Player disconnected: ", player.name)
 
 # if __name__ == '__main__':
 #     if GEVENT:

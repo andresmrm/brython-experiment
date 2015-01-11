@@ -6,9 +6,13 @@ from amoamo.websocket import WebSocket
 from amoamo.game import Game
 
 
-window.console.log("1")
 GAME = Game()
-window.console.log("2")
+window.GAME = GAME
 
 ws_addr = "ws://" + window.location.host + "/websocket"
-WS = WebSocket(ws_addr, GAME.process_msg)
+window.WS = WebSocket(
+    ws_addr,
+    on_open=GAME.open,
+    on_message=GAME.process_msg,
+    on_close=GAME.close,
+)

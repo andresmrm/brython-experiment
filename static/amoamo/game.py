@@ -21,6 +21,12 @@ class Game(object):
 
     def __init__(self):
         window.console.log("game-init")
+
+        window.avatar = None
+
+        # player name
+        self.name = None
+
         Game = JSConstructor(window.Phaser.Game)
         window.br_preload = self.preload
         window.br_create = self.create
@@ -33,15 +39,15 @@ class Game(object):
             'canvas-anchor',
             window.stater)
         self.game = window.game
-        self.elements = []
+        self.elements = {}
         window.console.log("game-init-fim")
 
     @staticmethod
     def preload():
         window.console.log("game-preload")
-        window.game.load.image('bunny', '/static/img/bunny.png')
+        window.game.load.image('bunny.png', '/static/img/bunny.png')
         window.game.load.image('grass', '/static/img/grass.png')
-        window.game.load.image('tree', '/static/img/tree1.png')
+        window.game.load.image('tree.png', '/static/img/tree1.png')
         window.game.load.spritesheet(
             'waterfall.png',
             '/static/img/waterfall1.png',
@@ -66,12 +72,10 @@ class Game(object):
         window.game.stage.backgroundColor = '#2d2d2d'
         window.game.add.tileSprite(0, 0, x, y, 'grass')
 
-        window.sprite = window.game.add.sprite(32, 200, 'bunny')
-        window.sprite.name = 'bunny-dude'
-        window.game.camera.follow(window.sprite)
+        # window.sprite = window.game.add.sprite(32, 200, 'bunny')
+        # window.sprite.name = 'bunny-dude'
+        # window.game.camera.follow(window.sprite)
         # window.game.camera.setPosition(1000,1000)
-
-        window.game.physics.enable(window.sprite, arcade)
 
         window.group = window.game.add.group()
         window.group.enableBody = True
@@ -96,42 +100,44 @@ class Game(object):
         #     c.name = 'chilli' + i;
         #     c.body.immovable = true;
         # }
-        SM.load('forest', ['forest.ogg'], loop=True, autoplay=True)
 
         window.cursors = window.game.input.keyboard.createCursorKeys()
+
+        window.GAME.login()
+
         window.console.log("game-create-fim")
 
     @staticmethod
     def update():
         # window.console.log("game-update")
+        if window.avatar:
+            window.game.physics.arcade.collide(
+                window.avatar,
+                window.group,
+                # Game.collisionHandler,
+                None,
+                None,
+                Game)
+            window.game.physics.arcade.collide(window.group, window.group)
 
-        window.game.physics.arcade.collide(
-            window.sprite,
-            window.group,
-            # Game.collisionHandler,
-            None,
-            None,
-            Game)
-        window.game.physics.arcade.collide(window.group, window.group)
+            window.avatar.body.velocity.x = 0
+            window.avatar.body.velocity.y = 0
+            x = window.avatar.body.x
+            y = window.avatar.body.y
 
-        window.sprite.body.velocity.x = 0
-        window.sprite.body.velocity.y = 0
-        x = window.sprite.body.x
-        y = window.sprite.body.y
+            SM.set_listener_pos(x, y)
 
-        SM.set_listener_pos(x, y)
+            if window.cursors.left.isDown:
+                window.avatar.body.velocity.x = -200
+            elif window.cursors.right.isDown:
+                window.avatar.body.velocity.x = 200
 
-        if window.cursors.left.isDown:
-            window.sprite.body.velocity.x = -200
-        elif window.cursors.right.isDown:
-            window.sprite.body.velocity.x = 200
-
-        if window.cursors.up.isDown:
-            window.sprite.body.velocity.y = -200
-        elif window.cursors.down.isDown:
-            window.sprite.body.velocity.y = 200
-        # window.console.log("game-update-fim")
-        window.game.world.wrap(window.sprite, 0, True)
+            if window.cursors.up.isDown:
+                window.avatar.body.velocity.y = -200
+            elif window.cursors.down.isDown:
+                window.avatar.body.velocity.y = 200
+            # window.console.log("game-update-fim")
+            window.game.world.wrap(window.avatar, 0, True)
 
     @staticmethod
     def render():
@@ -149,9 +155,23 @@ class Game(object):
         list_args = msg[1]
         window.console.log(msg)
         method = getattr(self, command)
-        window.console.log(method)
-        for args in list_args:
-            method(args)
+        if list_args:
+            for args in list_args:
+                method(args)
+        else:
+            method()
+
+    def login(self):
+        window.console.log("LOGIN!")
+        self.name = str(window.Math.floor(window.Math.random()*100))
+        data = json.dumps(["login", self.name])
+        window.WS.send(data)
+
+    def open(self, evt):
+        window.console.log("OPEN!!!!!!!!!!!")
+
+    def close(self, evt):
+        window.console.log("CLOSED!!!!!!!!!!!")
 
     def add_element(self, args):
         window.console.log("add_element")
@@ -187,5 +207,18 @@ class Game(object):
             )
             window.som = sound_element
 
-        self.elements.append(Element(visual_element, sound_element))
+        id = args.get('id')
+        element = Element(visual_element, sound_element)
+        self.elements[id] = element
+
+        # Check if is this player avatar
+        if id == "avatar_" + self.name:
+            # Fix 0 beeing converted to null by Brython
+            arcade = window.Phaser.Physics.ARCADE
+            if not arcade:
+                arcade = 0
+            window.game.physics.enable(element.sprite, arcade)
+            window.game.camera.follow(element.sprite)
+            window.avatar = element.sprite
+
         window.console.log("add_element-fim")
