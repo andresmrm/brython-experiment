@@ -1,0 +1,28 @@
+#!/bin/bash
+# This is a simple script and will be executed on your CI system if 
+# available.  Otherwise it will execute while your application is stopped
+# before the build step.  This script gets executed directly, so it
+# could be python, php, ruby, etc.
+
+if [ ! -d $OPENSHIFT_DATA_DIR/bin ]; then
+  if [ ! -f $OPENSHIFT_DATA_DIR/bin/python ]; then
+    # install python 2.7.x
+    cd $OPENSHIFT_TMP_DIR
+    VERSION=$(wget http://www.python.org/ftp/python/ 2>/dev/null -O -| grep -o '2\.7\.[0-9]*' | sort -t. -k3 -nr | head -1)
+    wget http://python.org/ftp/python/$VERSION/Python-$VERSION.tgz
+    tar zxf Python-$VERSION.tgz
+    cd Python-$VERSION
+    ./configure --prefix=$OPENSHIFT_DATA_DIR
+    make install
+  fi
+
+  # chdir to /tmp
+  cd $OPENSHIFT_TMP_DIR
+  # install setuptools
+  wget https://bitbucket.org/pypa/setuptools/raw/bootstrap/ez_setup.py -O - | $OPENSHIFT_DATA_DIR/bin/python
+  # install pip
+  $OPENSHIFT_DATA_DIR/bin/easy_install pip
+  # cleanup
+  rm -rf $OPENSHIFT_TMP_DIR/*
+fi
+

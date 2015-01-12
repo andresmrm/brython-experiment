@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 import json
+from collections import OrderedDict
+
+import gevent
 
 from flask import Flask, render_template, send_from_directory
 
@@ -15,9 +18,6 @@ app = Flask(__name__)
 
 from flask_sockets import Sockets
 sockets = Sockets(app)
-
-
-map = []
 
 
 @app.route('/')
@@ -40,35 +40,32 @@ class Map(object):
 
     def __init__(self):
         self.elements = []
-        me = MapElement(
-            x=300,
-            y=200,
-            img="waterfall.png",
-            animation="fall",
-            animation_speed=12,
-            sound=["waterfall.ogg"],
-            sound_autoplay=True,
-            sound_loop=True,
-        )
-        self.add(me)
-        me = MapElement(
-            sound=["forest.ogg"],
-            sound_autoplay=True,
-            sound_loop=True,
-        )
-        self.add(me)
-        me = MapElement(
-            x=400,
-            y=200,
-            img="tree.png",
-        )
-        self.add(me)
+        self.modified = OrderedDict()
 
     def add(self, element):
         self.elements.append(element)
 
     def remove(self, element):
         self.elements.remove(element)
+
+    def add_modified(self, element):
+        """Add an element to the modified list, so it can be updated to other
+        players"""
+        self.modified[element] = True
+
+    def remove_modified(self, element):
+        """Remove an element from the modified list"""
+        self.modified.pop(element)
+
+    def get_modified(self):
+        """Pops elements from list and returns them"""
+        try:
+            while True:
+                element = self.modified.popitem(last=False)
+                print("----------", element)
+                yield element[0]
+        except KeyError:
+            pass
 
     def __dump__(self):
         return self.elements
@@ -77,8 +74,8 @@ class Map(object):
 class MapElement(object):
 
     def __init__(self, **args):
-        # Everything that is passed in args will be dumped for network
-        self.dumpable = args
+        # Everything that is passed in args will be dumped via network
+        self.dumpable = args.keys()
         if 'id' not in args:
             # TODO no random...
             import random
@@ -87,16 +84,30 @@ class MapElement(object):
         for k, v in args.items():
             setattr(self, k, v)
 
-        self.changed = True
+        self.set_modified()
+
+    def set_pos(self, x, y):
+        self.x = x
+        self.y = y
+        self.set_modified()
+
+    def set_modified(self):
+        MAP.add_modified(self)
 
     def __dump__(self):
-        return self.dumpable
+        dump = {}
+        for k, v in self.__dict__.items():
+            if k in self.dumpable:
+                dump[k] = v
+        return dump
 
 
 class Players(object):
 
     def __init__(self):
         self.players = {}
+        gevent.spawn(self.update_players)
+        self.commands_queue = []
 
     # def create(self, id, ws):
     #     self.players[id] = player
@@ -106,11 +117,18 @@ class Players(object):
     #     self.players[id].send_map(MAP)
 
     def connect(self, ws):
-        player = Player(ws)
-        name = player.wait_login()
-        self.players[name] = player
-        player.create_avatar(MAP)
-        player.send_map(MAP)
+        new_player = Player(ws)
+        name = new_player.wait_login()
+        self.players[name] = new_player
+        new_player.create_avatar(MAP)
+        # new_player.send_map(MAP)
+        self.commands_queue.append((new_player, 'add_element', MAP))
+
+        for player in self.players.values():
+            if player is not new_player:
+                self.commands_queue.append((player, 'add_element',
+                                            [new_player.avatar]))
+
         return player
 
     def disconnect(self, name):
@@ -119,8 +137,56 @@ class Players(object):
         player.remove_avatar(MAP)
         del player.ws
 
+    def update_players(self):
+        while True:
+            gevent.sleep(.1)
+            msgs = {}
+            # WATER.set_modified()
+            for element in MAP.get_modified():
+                print(element.id)
+                for player in self.players.values():
+                    # Player may not have avatar yet...
+                    print("P:", player)
+                    try:
+                        avatar = player.avatar
+                    except AttributeError:
+                        pass
+                    if element is not avatar:
+                        # add element to be updated to each player
+                        # a dict is used to avoid repetition of elements
+                        print("N")
+                        elements = msgs.get(player, {})
+                        elements[element] = True
+                        msgs[player] = elements
 
-class Player(MapElement):
+            print(msgs)
+
+            for player, elements in msgs.items():
+                args = []
+                for element in elements:
+                    # TODO update more than pos?
+                    arg = {
+                        "id": element.id,
+                        "x": element.x,
+                        "y": element.y,
+                    }
+                    args.append(arg)
+
+                print("SEND", player, args)
+                # player were None once. maybe a paralelism problem!!!
+                if player:
+                    player.send_command("update_element", args)
+
+            # Other commands
+            while(len(self.commands_queue)):
+                pack = self.commands_queue.pop(0)
+                player = pack[0]
+                command = pack[1]
+                args = pack[2]
+                player.send_command(command, args)
+
+
+class Player(object):
 
     def __init__(self, ws):
         self.ws = ws
@@ -149,28 +215,53 @@ class Player(MapElement):
     def remove_avatar(self, map):
         map.remove(self.avatar)
 
-    def send_map(self, map):
-        self.send_data('add_element', map)
+    # def send_map(self, map):
+        # self.send_command('add_element', map)
 
-    def send_data(self, command, data):
+    def send_command(self, command, data):
         dump = json.dumps([command, data], cls=MyEncoder)
         self.ws.send(dump)
 
     def listen(self):
         while True:
-            msg = self.receive()
-            print(msg)
-            if msg is not None:
-                x, y = msg.decode("utf8").split(',')
-                id = len(map)
-                map.append((id, x, y))
-                self.send_data()
+            data = self.receive()
+            print(data)
+            if data is not None:
+                msg = json.loads(data)
+                if msg[0] == 'p':
+                    x, y = msg[1]
+                    self.avatar.set_pos(x, y)
             else:
                 break
 
 
 MAP = Map()
 PLAYERS = Players()
+
+me = MapElement(
+    x=300,
+    y=200,
+    img="waterfall.png",
+    animation="fall",
+    animation_speed=12,
+    sound=["waterfall.ogg"],
+    sound_autoplay=True,
+    sound_loop=True,
+)
+MAP.add(me)
+WATER = me
+me = MapElement(
+    sound=["forest.ogg"],
+    sound_autoplay=True,
+    sound_loop=True,
+)
+MAP.add(me)
+me = MapElement(
+    x=400,
+    y=200,
+    img="tree.png",
+)
+MAP.add(me)
 
 
 # @ws.route('/websocket')

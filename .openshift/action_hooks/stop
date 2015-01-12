@@ -1,0 +1,4 @@
+#!/bin/bash
+# The logic to stop your application should be put in this script.
+kill `ps aux | grep -v grep | grep 'supervisord-wsgi.conf' | awk '{print $2}'`
+exit 0

@@ -1,0 +1,6 @@
+supervisor
+pycrypto
+Flask
+gevent
+gunicorn
+flask_sockets

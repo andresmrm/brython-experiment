@@ -16,6 +16,13 @@ class Element(object):
         self.sprite = sprite
         self.sound = sound
 
+    def set_pos(self, x, y):
+        self.sprite.x = x
+        self.sprite.y = y
+        # TODO set sonud pos
+        # if self.sound:
+        #     self.sound.
+
 
 class Game(object):
 
@@ -127,15 +134,20 @@ class Game(object):
 
             SM.set_listener_pos(x, y)
 
+            window.avatar.moved = False
             if window.cursors.left.isDown:
                 window.avatar.body.velocity.x = -200
+                window.avatar.moved = True
             elif window.cursors.right.isDown:
                 window.avatar.body.velocity.x = 200
+                window.avatar.moved = True
 
             if window.cursors.up.isDown:
                 window.avatar.body.velocity.y = -200
+                window.avatar.moved = True
             elif window.cursors.down.isDown:
                 window.avatar.body.velocity.y = 200
+                window.avatar.moved = True
             # window.console.log("game-update-fim")
             window.game.world.wrap(window.avatar, 0, True)
 
@@ -149,7 +161,20 @@ class Game(object):
         window.console.log(player)
         window.console.log(obj)
 
+    def slow_update(self):
+        # send in a regular period
+        if window.avatar.moved:
+            window.GAME.send_pos()
+
+    def send_pos(self):
+        """Send the position of this player"""
+        x = int(window.avatar.body.x)
+        y = int(window.avatar.body.y)
+        data = json.dumps(["p", (x, y)])
+        window.WS.send(data)
+
     def process_msg(self, evt):
+        """Process incoming messages"""
         msg = json.loads(evt.data)
         command = msg[0]
         list_args = msg[1]
@@ -172,6 +197,14 @@ class Game(object):
 
     def close(self, evt):
         window.console.log("CLOSED!!!!!!!!!!!")
+
+    def update_element(self, args):
+        window.console.log("UPDATE!!!!!!!!!!!")
+        window.console.log(args)
+        id = args.get('id')
+        x = args.get('x')
+        y = args.get('y')
+        self.elements[id].set_pos(x, y)
 
     def add_element(self, args):
         window.console.log("add_element")
@@ -220,5 +253,6 @@ class Game(object):
             window.game.physics.enable(element.sprite, arcade)
             window.game.camera.follow(element.sprite)
             window.avatar = element.sprite
+            window.setInterval(self.slow_update, 100)
 
         window.console.log("add_element-fim")
