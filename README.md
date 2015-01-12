@@ -20,6 +20,8 @@ Old Run
 
 	gunicorn --reload -k flask_sockets.worker -b 127.0.0.1:8080 server:app
 
+or
+
 	uwsgi --py-autoreload 1 --master --http :8080 --http-websockets --wsgi server:app
 
 OpenShift
