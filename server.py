@@ -3,6 +3,7 @@ import json
 from collections import OrderedDict
 
 import gevent
+from gevent.queue import Queue
 
 from flask import Flask, render_template, send_from_directory
 
@@ -107,7 +108,7 @@ class Players(object):
     def __init__(self):
         self.players = {}
         gevent.spawn(self.update_players)
-        self.commands_queue = []
+        self.commands_queue = Queue()
 
     # def create(self, id, ws):
     #     self.players[id] = player
@@ -122,14 +123,14 @@ class Players(object):
         self.players[name] = new_player
         new_player.create_avatar(MAP)
         # new_player.send_map(MAP)
-        self.commands_queue.append((new_player, 'add_element', MAP))
+        self.commands_queue.put((new_player, 'add_element', MAP))
 
         for player in self.players.values():
             if player is not new_player:
-                self.commands_queue.append((player, 'add_element',
+                self.commands_queue.put((player, 'add_element',
                                             [new_player.avatar]))
 
-        return player
+        return new_player
 
     def disconnect(self, name):
         player = self.players[name]
@@ -178,12 +179,14 @@ class Players(object):
                     player.send_command("update_element", args)
 
             # Other commands
-            while(len(self.commands_queue)):
-                pack = self.commands_queue.pop(0)
+            self.commands_queue.put(StopIteration)
+            for pack in self.commands_queue:
                 player = pack[0]
                 command = pack[1]
                 args = pack[2]
-                player.send_command(command, args)
+                # player were None once. maybe a paralelism problem!!!
+                if player:
+                    player.send_command(command, args)
 
 
 class Player(object):

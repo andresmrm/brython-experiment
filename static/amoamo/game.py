@@ -191,6 +191,7 @@ class Game(object):
         self.name = str(window.Math.floor(window.Math.random()*100))
         data = json.dumps(["login", self.name])
         window.WS.send(data)
+        window.console.log("LOGED!")
 
     def open(self, evt):
         window.console.log("OPEN!!!!!!!!!!!")
