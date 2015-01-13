@@ -7,6 +7,7 @@ from gevent.queue import Queue
 
 from flask import Flask, render_template, send_from_directory
 
+app = Flask(__name__)
 # try:
 #     from flask.ext.uwsgi_websocket import GeventWebSocket
 #     ws = GeventWebSocket(app)
