@@ -1,7 +1,7 @@
 import json
 
 from browser import window
-from javascript import JSConstructor
+from javascript import JSConstructor, JSObject
 
 from amoamo.sound import SoundManager
 
@@ -13,8 +13,10 @@ window.SM = SM
 class Element(object):
 
     def __init__(self, sprite, sound=None):
+        # self.going_to = None
         self.sprite = sprite
         self.sound = sound
+        self.moving = None
 
     def set_pos(self, x, y):
         self.sprite.x = x
@@ -22,6 +24,18 @@ class Element(object):
         # TODO set sonud pos
         # if self.sound:
         #     self.sound.
+
+    def move_to_pos(self, x, y):
+        # self.going_to = (x, y)
+        # window.game.physics.arcade.moveToXY(self.sprite, x, y, 200, 100)
+        # self.GAME.moving.append(self)
+        self.sprite.moves = False
+        if self.moving:
+            self.moving.stop(True)
+        window.sprite = self.sprite
+        self.moving = window.game.add.tween(self.sprite)
+        self.moving.to({"x": x, "y": y}, 200,
+                       window.Phaser.Easing.Default, True)
 
 
 class Game(object):
@@ -33,6 +47,11 @@ class Game(object):
 
         # player name
         self.name = None
+
+        # special commands to send to server
+        self.send_queue = []
+
+        # elements moving and that need
 
         Game = JSConstructor(window.Phaser.Game)
         window.br_preload = self.preload
@@ -53,8 +72,10 @@ class Game(object):
     def preload():
         window.console.log("game-preload")
         window.game.load.image('bunny.png', '/static/img/bunny.png')
-        window.game.load.image('grass', '/static/img/grass.png')
-        window.game.load.image('tree.png', '/static/img/tree1.png')
+        window.game.load.image('grass', '/static/img/grass2.png')
+        # window.game.load.image('grass', '/static/img/grass.png')
+        window.game.load.image('tree.png', '/static/img/tree.png')
+        window.game.load.image('tree2.png', '/static/img/tree2.png')
         window.game.load.spritesheet(
             'waterfall.png',
             '/static/img/waterfall1.png',
@@ -76,7 +97,7 @@ class Game(object):
         window.game.physics.startSystem(arcade)
         window.game.world.setBounds(0, 0, x, y)
 
-        window.game.stage.backgroundColor = '#2d2d2d'
+        # window.game.stage.backgroundColor = '#2c8b2a'
         window.game.add.tileSprite(0, 0, x, y, 'grass')
 
         # window.sprite = window.game.add.sprite(32, 200, 'bunny')
@@ -109,6 +130,14 @@ class Game(object):
         # }
 
         window.cursors = window.game.input.keyboard.createCursorKeys()
+
+        # Getting code is bugged...
+        code = window.Phaser.Keyboard.C
+        if not code:
+            # key C
+            code = 67
+        key1 = window.game.input.keyboard.addKey(code)
+        key1.onDown.add(window.GAME.test_create)
 
         window.GAME.login()
 
@@ -148,6 +177,11 @@ class Game(object):
             elif window.cursors.down.isDown:
                 window.avatar.body.velocity.y = 200
                 window.avatar.moved = True
+
+            if window.game.input.mousePointer.isDown:
+                window.game.physics.arcade.moveToPointer(window.avatar, 200)
+                window.avatar.moved = True
+
             # window.console.log("game-update-fim")
             window.game.world.wrap(window.avatar, 0, True)
 
@@ -165,6 +199,9 @@ class Game(object):
         # send in a regular period
         if window.avatar.moved:
             window.GAME.send_pos()
+        while self.send_queue:
+            c, x, y, element = self.send_queue.pop(0)
+            self.send_new_element(x, y, element)
 
     def send_pos(self):
         """Send the position of this player"""
@@ -172,6 +209,24 @@ class Game(object):
         y = int(window.avatar.body.y)
         data = json.dumps(["p", (x, y)])
         window.WS.send(data)
+
+    def send_new_element(self, x, y, element):
+        """Send an element created by this player"""
+        data = json.dumps(["c", (x, y, element)])
+        window.WS.send(data)
+
+    @staticmethod
+    def test_create(ev):
+        window.console.log("CREATE")
+        window.console.log(ev)
+        x = int(window.avatar.body.x)
+        y = int(window.avatar.body.y)
+        element = "1"
+        window.GAME.create_new_element(x, y, element)
+        window.console.log("CREATE-fim")
+
+    def create_new_element(self, x, y, element):
+        self.send_queue.append(('c', x, y, element))
 
     def process_msg(self, evt):
         """Process incoming messages"""
@@ -205,24 +260,39 @@ class Game(object):
         id = args.get('id')
         x = args.get('x')
         y = args.get('y')
-        self.elements[id].set_pos(x, y)
+        self.elements[id].move_to_pos(x, y)
 
     def add_element(self, args):
         window.console.log("add_element")
         window.console.log(args)
+        id = args.get('id')
         visual_element = sound_element = None
         # if has an image
         img = args.get('img')
         if img:
             x = args.get('x')
             y = args.get('y')
-            visual_element = window.game.add.sprite(x, y, img)
+            # Check if is this player avatar
+            if id == "avatar_" + self.name:
+                visual_element = window.game.add.sprite(x, y, img)
+                # Fix 0 beeing converted to null by Brython
+                arcade = window.Phaser.Physics.ARCADE
+                if not arcade:
+                    arcade = 0
+                window.game.physics.enable(visual_element, arcade)
+                window.game.camera.follow(visual_element)
+                window.avatar = visual_element
+                window.setInterval(self.slow_update, 100)
+            else:
+                visual_element = window.group.create(x, y, img)
+                visual_element.body.immovable = True
             # if has an animation
             animation = args.get('animation')
             if animation:
                 visual_element.animations.add(animation)
                 animation_speed = args.get('animation_speed', 10)
-                visual_element.animations.play(animation, animation_speed, True)
+                visual_element.animations.play(
+                    animation, animation_speed, True)
 
         # if has a sound
         sound = args.get('sound')
@@ -241,19 +311,7 @@ class Game(object):
             )
             window.som = sound_element
 
-        id = args.get('id')
         element = Element(visual_element, sound_element)
         self.elements[id] = element
-
-        # Check if is this player avatar
-        if id == "avatar_" + self.name:
-            # Fix 0 beeing converted to null by Brython
-            arcade = window.Phaser.Physics.ARCADE
-            if not arcade:
-                arcade = 0
-            window.game.physics.enable(element.sprite, arcade)
-            window.game.camera.follow(element.sprite)
-            window.avatar = element.sprite
-            window.setInterval(self.slow_update, 100)
 
         window.console.log("add_element-fim")

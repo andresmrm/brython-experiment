@@ -122,13 +122,13 @@ class Players(object):
         name = new_player.wait_login()
         self.players[name] = new_player
         new_player.create_avatar(MAP)
-        # new_player.send_map(MAP)
+        # Send world for new player
         self.commands_queue.put((new_player, 'add_element', MAP))
-
+        # Send new player for other players
         for player in self.players.values():
             if player is not new_player:
-                self.commands_queue.put((player, 'add_element',
-                                            [new_player.avatar]))
+                self.commands_queue.put(
+                    (player, 'add_element', [new_player.avatar]))
 
         return new_player
 
@@ -234,6 +234,17 @@ class Player(object):
                 if msg[0] == 'p':
                     x, y = msg[1]
                     self.avatar.set_pos(x, y)
+                if msg[0] == 'c':
+                    x, y, element = msg[1]
+                    me = MapElement(
+                        x=x,
+                        y=y,
+                        img="tree2.png",
+                    )
+                    MAP.add(me)
+                    for player in PLAYERS.players.values():
+                        PLAYERS.commands_queue.put(
+                            (player, 'add_element', [me]))
             else:
                 break
 
@@ -243,7 +254,7 @@ PLAYERS = Players()
 
 me = MapElement(
     x=300,
-    y=200,
+    y=0,
     img="waterfall.png",
     animation="fall",
     animation_speed=12,
@@ -262,7 +273,7 @@ MAP.add(me)
 me = MapElement(
     x=400,
     y=200,
-    img="tree.png",
+    img="tree2.png",
 )
 MAP.add(me)
 

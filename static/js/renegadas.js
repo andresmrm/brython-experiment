@@ -1,3 +1,7 @@
+function teste() {
+    alert("TESTE");
+}
+
 var br_preload = null;
 var br_create = null;
 var br_update = null;
