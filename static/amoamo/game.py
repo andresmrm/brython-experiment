@@ -10,6 +10,14 @@ SM = SoundManager("/static/sounds/")
 window.SM = SM
 
 
+def set_filter(sprite):
+    # Dark magic to allow setting filter (why?!)
+    window.console.log(sprite)
+    array = JSObject(JSConstructor(window.Array)())
+    array.push(window.filter)
+    sprite.filters = array
+
+
 class Element(object):
 
     def __init__(self, sprite, sound=None):
@@ -71,6 +79,9 @@ class Game(object):
     @staticmethod
     def preload():
         window.console.log("game-preload")
+
+        window.game.load.script('filter', '/static/js/filter.js?982dk9823891')
+
         window.game.load.image('bunny.png', '/static/img/bunny.png')
         window.game.load.image('grass', '/static/img/grass2.png')
         # window.game.load.image('grass', '/static/img/grass.png')
@@ -98,7 +109,7 @@ class Game(object):
         window.game.world.setBounds(0, 0, x, y)
 
         # window.game.stage.backgroundColor = '#2c8b2a'
-        window.game.add.tileSprite(0, 0, x, y, 'grass')
+        window.tile = window.game.add.tileSprite(0, 0, x, y, 'grass')
 
         # window.sprite = window.game.add.sprite(32, 200, 'bunny')
         # window.sprite.name = 'bunny-dude'
@@ -138,6 +149,10 @@ class Game(object):
             code = 67
         key1 = window.game.input.keyboard.addKey(code)
         key1.onDown.add(window.GAME.test_create)
+
+        window.filter = window.game.add.filter('DayLight')
+        set_filter(window.tile)
+        window.GAME.dusk()
 
         window.GAME.login()
 
@@ -214,6 +229,27 @@ class Game(object):
         """Send an element created by this player"""
         data = json.dumps(["c", (x, y, element)])
         window.WS.send(data)
+
+    def dusk(self):
+        window.GAME.daynight = window.game.add.tween(window.filter)
+        noon = {"r": 1.0, "rs": 0.0, "g": 1.0, "gs": 0.0,
+                "b": 1.0, "bs": 0.0}
+        dusk = {"r": 0.9, "rs": 0.15, "g": 0.8, "gs": 0.0,
+                "b": 0.8, "bs": 0.0}
+        dawn = {"r": 0.9, "rs": 0.10, "g": 0.85, "gs": 0.05,
+                "b": 0.8, "bs": 0.0}
+        night = {"r": 0.3, "rs": 0.0, "g": 0.5, "gs": 0.0,
+                 "b": 0.6, "bs": 0.15}
+        s = 1000
+        t = window.Phaser.Easing.Default
+        # colors, transition time, trasition type, autostart, wait before start
+        window.GAME.daynight.to(dusk, 30 * s, t, False, 120 * s)\
+                            .to(night, 30 * s, t, False, 30 * s)\
+                            .to(dawn, 30 * s, t, False, 120 * s)\
+                            .to(noon, 30 * s, t, False, 30 * s)\
+                            .loop()\
+                            .start()
+        # window.GAME.daynight.start()
 
     @staticmethod
     def test_create(ev):
@@ -293,6 +329,8 @@ class Game(object):
                 animation_speed = args.get('animation_speed', 10)
                 visual_element.animations.play(
                     animation, animation_speed, True)
+
+            set_filter(visual_element)
 
         # if has a sound
         sound = args.get('sound')
