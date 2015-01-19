@@ -42,6 +42,17 @@ class Map(object):
     def __init__(self):
         self.elements = []
         self.modified = OrderedDict()
+        self.daytime = 12
+
+    def run_daytime(self):
+        """Thread that take care of the time of the day"""
+        while True:
+            gevent.sleep(60)
+            self.daytime += 1
+            if self.daytime >= 24:
+                self.daytime = 0
+            PLAYERS.broadcast_command("set_daytime", [self.daytime])
+            print("TIME: ", self.daytime)
 
     def add(self, element):
         self.elements.append(element)
@@ -108,6 +119,7 @@ class Players(object):
     def __init__(self):
         self.players = {}
         gevent.spawn(self.update_players)
+        gevent.spawn(MAP.run_daytime)
         self.commands_queue = Queue()
 
     # def create(self, id, ws):
@@ -123,12 +135,11 @@ class Players(object):
         self.players[name] = new_player
         new_player.create_avatar(MAP)
         # Send world for new player
-        self.commands_queue.put((new_player, 'add_element', MAP))
+        self.add_command(new_player, 'add_element', MAP)
         # Send new player for other players
         for player in self.players.values():
             if player is not new_player:
-                self.commands_queue.put(
-                    (player, 'add_element', [new_player.avatar]))
+                self.add_command(player, 'add_element', [new_player.avatar])
 
         return new_player
 
@@ -137,6 +148,14 @@ class Players(object):
         self.players[name] = None
         player.remove_avatar(MAP)
         del player.ws
+
+    def add_command(self, player, command, args):
+        # Adds a command to the command queue
+        self.commands_queue.put((player, command, args))
+
+    def broadcast_command(self, command, args):
+        for player in self.players.values():
+            self.add_command(player, command, args)
 
     def update_players(self):
         while True:
@@ -243,8 +262,7 @@ class Player(object):
                     )
                     MAP.add(me)
                     for player in PLAYERS.players.values():
-                        PLAYERS.commands_queue.put(
-                            (player, 'add_element', [me]))
+                        PLAYERS.add_command(player, 'add_element', [me])
             else:
                 break
 
@@ -265,8 +283,16 @@ me = MapElement(
 MAP.add(me)
 WATER = me
 me = MapElement(
+    id="sound_day",
     sound=["forest.ogg"],
-    sound_autoplay=True,
+    # sound_autoplay=True,
+    sound_loop=True,
+)
+MAP.add(me)
+me = MapElement(
+    id="sound_night",
+    sound=["night.ogg"],
+    # sound_autoplay=True,
     sound_loop=True,
 )
 MAP.add(me)

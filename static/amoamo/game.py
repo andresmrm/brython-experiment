@@ -74,6 +74,19 @@ class Game(object):
             window.stater)
         self.game = window.game
         self.elements = {}
+
+        # Day/Night light colors
+        self.amb_light = {
+            "noon": {"r": 1.0, "rs": 0.0, "g": 1.0, "gs": 0.0,
+                     "b": 1.0, "bs": 0.0},
+            "dusk": {"r": 0.9, "rs": 0.15, "g": 0.8, "gs": 0.0,
+                     "b": 0.8, "bs": 0.0},
+            "dawn": {"r": 0.9, "rs": 0.10, "g": 0.85, "gs": 0.05,
+                     "b": 0.8, "bs": 0.0},
+            "night": {"r": 0.3, "rs": 0.0, "g": 0.5, "gs": 0.0,
+                      "b": 0.6, "bs": 0.15},
+        }
+
         window.console.log("game-init-fim")
 
     @staticmethod
@@ -152,7 +165,6 @@ class Game(object):
 
         window.filter = window.game.add.filter('DayLight')
         set_filter(window.tile)
-        window.GAME.dusk()
 
         window.GAME.login()
 
@@ -230,27 +242,6 @@ class Game(object):
         data = json.dumps(["c", (x, y, element)])
         window.WS.send(data)
 
-    def dusk(self):
-        window.GAME.daynight = window.game.add.tween(window.filter)
-        noon = {"r": 1.0, "rs": 0.0, "g": 1.0, "gs": 0.0,
-                "b": 1.0, "bs": 0.0}
-        dusk = {"r": 0.9, "rs": 0.15, "g": 0.8, "gs": 0.0,
-                "b": 0.8, "bs": 0.0}
-        dawn = {"r": 0.9, "rs": 0.10, "g": 0.85, "gs": 0.05,
-                "b": 0.8, "bs": 0.0}
-        night = {"r": 0.3, "rs": 0.0, "g": 0.5, "gs": 0.0,
-                 "b": 0.6, "bs": 0.15}
-        s = 1000
-        t = window.Phaser.Easing.Default
-        # colors, transition time, trasition type, autostart, wait before start
-        window.GAME.daynight.to(dusk, 30 * s, t, False, 120 * s)\
-                            .to(night, 30 * s, t, False, 30 * s)\
-                            .to(dawn, 30 * s, t, False, 120 * s)\
-                            .to(noon, 30 * s, t, False, 30 * s)\
-                            .loop()\
-                            .start()
-        # window.GAME.daynight.start()
-
     @staticmethod
     def test_create(ev):
         window.console.log("CREATE")
@@ -269,13 +260,58 @@ class Game(object):
         msg = json.loads(evt.data)
         command = msg[0]
         list_args = msg[1]
-        window.console.log(msg)
+        # window.console.log(msg)
         method = getattr(self, command)
         if list_args:
             for args in list_args:
+                # window.console.log(args)
                 method(args)
         else:
             method()
+
+    def slowly_switch_sounds(self, ida, idb, duration):
+        # ID of the element that has the sound starting
+        # ID of the element that has the sound stopping
+        # duration (in milisecs) of the start
+        sound = self.elements.get(ida)
+        if sound:
+            sound.sound.play()
+            sound.sound.fade(0, 1, duration)
+
+        sound = self.elements.get(idb)
+        if sound:
+            def mini_stop():
+                sound.sound.stop()
+            sound.sound.fade(1, 0, duration)
+            sound.sound.faded = mini_stop
+
+    def set_daytime(self, time):
+        self.daytime = time
+
+        # Stops possible old tween (who knows...)
+        try:
+            window.GAME.daynight.stop(True)
+        except:
+            pass
+        window.GAME.daynight = window.game.add.tween(window.filter)
+
+        s = 1000
+        t = window.Phaser.Easing.Default
+        # colors, transition time, trasition type, autostart, wait before start
+        if time == 6:
+            window.GAME.daynight.to(self.amb_light["dawn"], 30 * s, t, True)
+            self.slowly_switch_sounds("sound_day", "sound_night", 30 * s)
+            print("DAWN")
+        elif time == 7:
+            window.GAME.daynight.to(self.amb_light["noon"], 30 * s, t, True)
+            print("NOON")
+        elif time == 18:
+            window.GAME.daynight.to(self.amb_light["dusk"], 30 * s, t, True)
+            self.slowly_switch_sounds("sound_night", "sound_day", 30 * s)
+            print("DUSK")
+        elif time == 19:
+            window.GAME.daynight.to(self.amb_light["night"], 30 * s, t, True)
+            print("NIGHT")
 
     def login(self):
         window.console.log("LOGIN!")
