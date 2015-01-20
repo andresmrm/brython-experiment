@@ -272,18 +272,18 @@ class Player(object):
 MAP = Map()
 PLAYERS = Players()
 
-# me = MapElement(
-#     x=300,
-#     y=0,
-#     img="waterfall.png",
-#     animation="fall",
-#     animation_speed=12,
-#     sound=["waterfall.ogg"],
-#     sound_autoplay=True,
-#     sound_loop=True,
-# )
-# MAP.add(me)
-# WATER = me
+me = MapElement(
+    x=300,
+    y=0,
+    img="waterfall.png",
+    animation="fall",
+    animation_speed=12,
+    sound=["waterfall.ogg"],
+    sound_autoplay=True,
+    sound_loop=True,
+)
+MAP.add(me)
+WATER = me
 me = MapElement(
     id="sound_day",
     sound=["forest.ogg"],
