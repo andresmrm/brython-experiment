@@ -12,7 +12,7 @@ window.SM = SM
 
 def set_filter(sprite):
     # Dark magic to allow setting filter (why?!)
-    window.console.log(sprite)
+    # window.console.log(sprite)
     array = JSObject(JSConstructor(window.Array)())
     array.push(window.filter)
     sprite.filters = array
@@ -86,6 +86,10 @@ class Game(object):
             "night": {"r": 0.3, "rs": 0.0, "g": 0.5, "gs": 0.0,
                       "b": 0.6, "bs": 0.15},
         }
+        # Ambient light tween
+        self.daynight = None
+        # Number with the current time
+        self.daytime = None
 
         window.console.log("game-init-fim")
 
@@ -262,10 +266,13 @@ class Game(object):
         list_args = msg[1]
         # window.console.log(msg)
         method = getattr(self, command)
+        print("list_arg")
+        window.console.log(list_args)
         if list_args:
             for args in list_args:
-                # window.console.log(args)
-                method(args)
+                print("arg")
+                window.console.log(args)
+                method(*args)
         else:
             method()
 
@@ -280,38 +287,82 @@ class Game(object):
 
         sound = self.elements.get(idb)
         if sound:
+            # TODO this seems not to work...
             def mini_stop():
                 sound.sound.stop()
+                print("STOP")
+                window.console.log(sound)
             sound.sound.fade(1, 0, duration)
             sound.sound.faded = mini_stop
 
-    def set_daytime(self, time):
+    def set_daytime(self, time, force=False):
+        window.console.log(time)
+        window.console.log(force)
         self.daytime = time
 
-        # Stops possible old tween (who knows...)
-        try:
-            window.GAME.daynight.stop(True)
-        except:
-            pass
-        window.GAME.daynight = window.game.add.tween(window.filter)
+        if not self.daynight:
+            window.GAME.daynight = window.game.add.tween(window.filter)
+        else:
+            # Stops possible old tween (who knows...)
+            try:
+                window.GAME.daynight.stop(True)
+            except:
+                pass
 
-        s = 1000
-        t = window.Phaser.Easing.Default
-        # colors, transition time, trasition type, autostart, wait before start
+        s = 30
         if time == 6:
-            window.GAME.daynight.to(self.amb_light["dawn"], 30 * s, t, True)
-            self.slowly_switch_sounds("sound_day", "sound_night", 30 * s)
-            print("DAWN")
+            self.dawn(s)
         elif time == 7:
-            window.GAME.daynight.to(self.amb_light["noon"], 30 * s, t, True)
-            print("NOON")
+            self.noon(s)
         elif time == 18:
-            window.GAME.daynight.to(self.amb_light["dusk"], 30 * s, t, True)
-            self.slowly_switch_sounds("sound_night", "sound_day", 30 * s)
-            print("DUSK")
+            self.dusk(s)
         elif time == 19:
-            window.GAME.daynight.to(self.amb_light["night"], 30 * s, t, True)
-            print("NIGHT")
+            self.night(s)
+
+        # Forces an effect (usefull for the game start)
+        if force:
+            if time > 7 and time < 18:
+                self.noon(1)
+            elif time > 19 or time < 6:
+                self.night(1)
+
+    def dawn(self, duration, transition=window.Phaser.Easing.Default):
+        """Starts the light and sounds for dawn
+        Transition duration in seconds
+        Trasition type function"""
+        # colors, transition time, trasition type, autostart, wait before
+        self.daynight.to(self.amb_light["dawn"], 1000 * duration,
+                         transition, True)
+        self.slowly_switch_sounds("sound_day", "sound_night", 1000 * duration)
+        print("DAWN")
+
+    def noon(self, duration, transition=window.Phaser.Easing.Default):
+        """Starts the light and sounds for noon.
+        Transition duration in seconds
+        Trasition type function"""
+        # colors, transition time, trasition type, autostart, wait before
+        self.daynight.to(self.amb_light["noon"], 1000 * duration,
+                         transition, True)
+        print("NOON")
+
+    def night(self, duration, transition=window.Phaser.Easing.Default):
+        """Starts the light and sounds for night.
+        Transition duration in seconds
+        Trasition type function"""
+        # colors, transition time, trasition type, autostart, wait before
+        self.daynight.to(self.amb_light["night"], 1000 * duration,
+                         transition, True)
+        print("NIGHT")
+
+    def dusk(self, duration, transition=window.Phaser.Easing.Default):
+        """Starts the light and sounds for night.
+        Transition duration in seconds
+        Trasition type function"""
+        # colors, transition time, trasition type, autostart, wait before
+        self.daynight.to(self.amb_light["dusk"], 1000 * duration,
+                         transition, True)
+        self.slowly_switch_sounds("sound_night", "sound_day", 1000 * duration)
+        print("DUSK")
 
     def login(self):
         window.console.log("LOGIN!")
@@ -335,6 +386,7 @@ class Game(object):
         self.elements[id].move_to_pos(x, y)
 
     def add_element(self, args):
+        """Adds one element to the world"""
         window.console.log("add_element")
         window.console.log(args)
         id = args.get('id')

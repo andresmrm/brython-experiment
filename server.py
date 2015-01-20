@@ -51,7 +51,7 @@ class Map(object):
             self.daytime += 1
             if self.daytime >= 24:
                 self.daytime = 0
-            PLAYERS.broadcast_command("set_daytime", [self.daytime])
+            PLAYERS.broadcast_command("set_daytime", [(self.daytime,)])
             print("TIME: ", self.daytime)
 
     def add(self, element):
@@ -111,7 +111,7 @@ class MapElement(object):
         for k, v in self.__dict__.items():
             if k in self.dumpable:
                 dump[k] = v
-        return dump
+        return (dump,)
 
 
 class Players(object):
@@ -136,6 +136,7 @@ class Players(object):
         new_player.create_avatar(MAP)
         # Send world for new player
         self.add_command(new_player, 'add_element', MAP)
+        self.add_command(new_player, 'set_daytime', [(MAP.daytime, True)])
         # Send new player for other players
         for player in self.players.values():
             if player is not new_player:
