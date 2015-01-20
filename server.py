@@ -152,6 +152,7 @@ class Players(object):
 
     def add_command(self, player, command, args):
         # Adds a command to the command queue
+        # args is a LIST of LIST of args!
         self.commands_queue.put((player, command, args))
 
     def broadcast_command(self, command, args):
@@ -271,18 +272,18 @@ class Player(object):
 MAP = Map()
 PLAYERS = Players()
 
-me = MapElement(
-    x=300,
-    y=0,
-    img="waterfall.png",
-    animation="fall",
-    animation_speed=12,
-    sound=["waterfall.ogg"],
-    sound_autoplay=True,
-    sound_loop=True,
-)
-MAP.add(me)
-WATER = me
+# me = MapElement(
+#     x=300,
+#     y=0,
+#     img="waterfall.png",
+#     animation="fall",
+#     animation_speed=12,
+#     sound=["waterfall.ogg"],
+#     sound_autoplay=True,
+#     sound_loop=True,
+# )
+# MAP.add(me)
+# WATER = me
 me = MapElement(
     id="sound_day",
     sound=["forest.ogg"],

@@ -323,8 +323,14 @@ class Game(object):
         if force:
             if time > 7 and time < 18:
                 self.noon(1)
+                sound = self.elements.get("sound_day")
+                if sound:
+                    sound.sound.play()
             elif time > 19 or time < 6:
                 self.night(1)
+                sound = self.elements.get("sound_night")
+                if sound:
+                    sound.sound.play()
 
     def dawn(self, duration, transition=window.Phaser.Easing.Default):
         """Starts the light and sounds for dawn
