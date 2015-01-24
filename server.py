@@ -140,7 +140,7 @@ class Players(object):
         # Send new player for other players
         for player in self.players.values():
             if player is not new_player:
-                self.add_command(player, 'add_element', (new_player.avatar,))
+                self.add_command(player, 'add_element', new_player.avatar)
 
         return new_player
 
@@ -267,7 +267,7 @@ class Player(object):
                     )
                     MAP.add(me)
                     for player in PLAYERS.players.values():
-                        PLAYERS.add_command(player, 'add_element', (me,))
+                        PLAYERS.add_command(player, 'add_element', me)
             else:
                 break
 

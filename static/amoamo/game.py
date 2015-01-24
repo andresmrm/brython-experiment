@@ -409,13 +409,15 @@ class Game(object):
         id = args.get('id')
         x = args.get('x')
         y = args.get('y')
-        self.elements[id].move_to_pos(x, y)
+        try:
+            self.elements[id].move_to_pos(x, y)
+        except KeyError:
+            print("Element not found when trying to update!")
 
     def add_element(self, args):
         """Adds one element to the world"""
         window.console.log("add_element")
         window.console.log(args)
-        window.console.log("OOOOOOOOOOO")
         id = args.get('id')
         visual_element = sound_element = None
         # if has an image
