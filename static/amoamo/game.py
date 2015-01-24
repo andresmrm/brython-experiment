@@ -262,19 +262,39 @@ class Game(object):
     def process_msg(self, evt):
         """Process incoming messages"""
         msg = json.loads(evt.data)
-        command = msg[0]
-        list_args = msg[1]
-        # window.console.log(msg)
-        method = getattr(self, command)
-        print("list_arg")
+
+        # Allows miltiple commands in one msg
+        window.console.log(msg)
+        if msg[0][0] == "M":
+            print("MULT")
+            command = msg[0][1:]
+            list_args = msg[1]
+        else:
+            print("SIMPLES")
+            command = msg[0]
+            args = msg[1]
+            list_args = None
+        window.console.log(command)
         window.console.log(list_args)
+
+        method = getattr(self, command)
         if list_args:
+            print("MULT2")
+            window.console.log(list_args)
             for args in list_args:
                 print("arg")
                 window.console.log(args)
-                method(*args)
+                if args:
+                    method(*args)
+                else:
+                    method()
         else:
-            method()
+            print("SIMPLES2")
+            window.console.log(args)
+            if args:
+                method(*args)
+            else:
+                method()
 
     def slowly_switch_sounds(self, ida, idb, duration):
         # ID of the element that has the sound starting
@@ -395,6 +415,7 @@ class Game(object):
         """Adds one element to the world"""
         window.console.log("add_element")
         window.console.log(args)
+        window.console.log("OOOOOOOOOOO")
         id = args.get('id')
         visual_element = sound_element = None
         # if has an image

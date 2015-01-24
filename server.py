@@ -51,7 +51,7 @@ class Map(object):
             self.daytime += 1
             if self.daytime >= 24:
                 self.daytime = 0
-            PLAYERS.broadcast_command("set_daytime", [(self.daytime,)])
+            PLAYERS.broadcast_command("set_daytime", (self.daytime,))
             print("TIME: ", self.daytime)
 
     def add(self, element):
@@ -135,12 +135,12 @@ class Players(object):
         self.players[name] = new_player
         new_player.create_avatar(MAP)
         # Send world for new player
-        self.add_command(new_player, 'add_element', MAP)
-        self.add_command(new_player, 'set_daytime', [(MAP.daytime, True)])
+        self.add_command(new_player, 'add_element', MAP, multiple=True)
+        self.add_command(new_player, 'set_daytime', (MAP.daytime, True))
         # Send new player for other players
         for player in self.players.values():
             if player is not new_player:
-                self.add_command(player, 'add_element', [new_player.avatar])
+                self.add_command(player, 'add_element', (new_player.avatar,))
 
         return new_player
 
@@ -150,10 +150,13 @@ class Players(object):
         player.remove_avatar(MAP)
         del player.ws
 
-    def add_command(self, player, command, args):
+    def add_command(self, player, command, args, multiple=False):
         # Adds a command to the command queue
-        # args is a LIST of LIST of args!
-        self.commands_queue.put((player, command, args))
+        # if multiple, args is a LIST of LIST of args!
+        if multiple:
+            self.commands_queue.put((player, 'M' + command, args))
+        else:
+            self.commands_queue.put((player, command, args))
 
     def broadcast_command(self, command, args):
         for player in self.players.values():
@@ -243,7 +246,7 @@ class Player(object):
         # self.send_command('add_element', map)
 
     def send_command(self, command, data):
-        dump = json.dumps([command, data], cls=MyEncoder)
+        dump = json.dumps((command, data), cls=MyEncoder)
         self.ws.send(dump)
 
     def listen(self):
@@ -264,7 +267,7 @@ class Player(object):
                     )
                     MAP.add(me)
                     for player in PLAYERS.players.values():
-                        PLAYERS.add_command(player, 'add_element', [me])
+                        PLAYERS.add_command(player, 'add_element', (me,))
             else:
                 break
 
