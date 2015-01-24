@@ -42,7 +42,7 @@ class Map(object):
     def __init__(self):
         self.elements = []
         self.modified = OrderedDict()
-        self.daytime = 12
+        self.daytime = 5
 
     def run_daytime(self):
         """Thread that take care of the time of the day"""

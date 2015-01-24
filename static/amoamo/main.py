@@ -1,6 +1,8 @@
 # from urllib.parse import urljoin
 # from browser import document as doc
-from browser import window
+from browser import window, document
+
+document['loading-text'].text = "Loading Game..."
 
 from amoamo.websocket import WebSocket
 from amoamo.game import Game

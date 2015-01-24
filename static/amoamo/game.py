@@ -1,6 +1,6 @@
 import json
 
-from browser import window
+from browser import window, document
 from javascript import JSConstructor, JSObject
 
 from amoamo.sound import SoundManager
@@ -398,10 +398,10 @@ class Game(object):
         window.console.log("LOGED!")
 
     def open(self, evt):
-        window.console.log("OPEN!!!!!!!!!!!")
+        document['loading-text'].text = "Socket open!"
 
     def close(self, evt):
-        window.console.log("CLOSED!!!!!!!!!!!")
+        document['loading-text'].text = "Socket CLOSED!"
 
     def update_element(self, args):
         window.console.log("UPDATE!!!!!!!!!!!")
