@@ -95,6 +95,7 @@ class Game(object):
 
     @staticmethod
     def preload():
+        document['loading-text'].text = "Preloading stuff..."
         window.console.log("game-preload")
 
         window.game.load.script('filter', '/static/js/filter.js?982dk9823891')
@@ -114,6 +115,7 @@ class Game(object):
 
     @staticmethod
     def create():
+        document['loading-text'].text = "Creating world..."
         x = y = 2000
 
         # Fix 0 beeing converted to null by Brython
@@ -185,7 +187,7 @@ class Game(object):
                 None,
                 None,
                 Game)
-            window.game.physics.arcade.collide(window.group, window.group)
+            # window.game.physics.arcade.collide(window.group, window.group)
 
             window.avatar.body.velocity.x = 0
             window.avatar.body.velocity.y = 0
@@ -391,17 +393,21 @@ class Game(object):
         print("DUSK")
 
     def login(self):
+        document['loading-text'].text = "Loggin in..."
         window.console.log("LOGIN!")
         self.name = str(window.Math.floor(window.Math.random()*100))
         data = json.dumps(["login", self.name])
         window.WS.send(data)
         window.console.log("LOGED!")
+        document['loading-text'].text = "Logged!"
 
     def open(self, evt):
-        document['loading-text'].text = "Socket open!"
+        document['socket-status'].text = "OPEN"
+        document["canvas-anchor"].style.display = 'block'
 
     def close(self, evt):
-        document['loading-text'].text = "Socket CLOSED!"
+        document['socket-status'].text = "CLOSED"
+        document["canvas-anchor"].style.display = 'none'
 
     def update_element(self, args):
         window.console.log("UPDATE!!!!!!!!!!!")

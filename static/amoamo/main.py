@@ -3,6 +3,7 @@
 from browser import window, document
 
 document['loading-text'].text = "Loading Game..."
+document["canvas-anchor"].style.display = 'none'
 
 from amoamo.websocket import WebSocket
 from amoamo.game import Game
