@@ -180,14 +180,13 @@ class Game(object):
     def update():
         # window.console.log("game-update")
         if window.avatar:
-            window.game.physics.arcade.collide(
-                window.avatar,
-                window.group,
-                # Game.collisionHandler,
-                None,
-                None,
-                Game)
-            # window.game.physics.arcade.collide(window.group, window.group)
+            # window.game.physics.arcade.collide(
+            #     window.avatar,
+            #     window.group,
+            #     # Game.collisionHandler,
+            #     None,
+            #     None,
+            #     Game)
 
             window.avatar.body.velocity.x = 0
             window.avatar.body.velocity.y = 0
